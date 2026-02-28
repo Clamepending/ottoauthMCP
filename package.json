@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "description": "MCP stdio proxy for Ottoauth HTTP APIs with daily tool refresh",
+  "description": "MCP stdio proxy for Ottoauth HTTP APIs with hourly refresh and webhook relay",
   "bin": {
     "ottoauth-mcp": "src/index.mjs"
   },

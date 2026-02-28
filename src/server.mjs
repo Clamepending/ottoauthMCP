@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { createWebhookRelay } from "./webhook.mjs";
 
 export const DEFAULT_BASE_URL = "http://localhost:3000";
 export const DEFAULT_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
@@ -22,6 +23,14 @@ export const DEFAULT_HTTP_TIMEOUT_MS = 30_000;
  * httpTimeoutMs?: number;
  * fetchImpl?: typeof fetch;
  * logger?: Pick<Console, 'error'>;
+ * webhookPath?: string;
+ * webhookListenHost?: string;
+ * webhookListenPort?: number;
+ * webhookSecret?: string;
+ * webhookAllowUnsigned?: boolean;
+ * gatewayUrl?: string;
+ * gatewayAuthToken?: string;
+ * webhookStorePath?: string;
  * }} [options]
  */
 export function createOttoauthMcpServer(options = {}) {
@@ -30,6 +39,18 @@ export function createOttoauthMcpServer(options = {}) {
   const httpTimeoutMs = options.httpTimeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS;
   const fetchImpl = options.fetchImpl ?? fetch;
   const logger = options.logger ?? console;
+  const webhookRelay = createWebhookRelay({
+    fetchImpl,
+    logger,
+    webhookPath: options.webhookPath,
+    listenHost: options.webhookListenHost,
+    listenPort: options.webhookListenPort,
+    webhookSecret: options.webhookSecret,
+    allowUnsigned: options.webhookAllowUnsigned,
+    gatewayUrl: options.gatewayUrl,
+    gatewayAuthToken: options.gatewayAuthToken,
+    storePath: options.webhookStorePath,
+  });
 
   /** @type {Map<string, EndpointTool>} */
   const endpointTools = new Map();
@@ -105,7 +126,117 @@ export function createOttoauthMcpServer(options = {}) {
     },
   );
 
+  server.registerTool(
+    "webhook_status",
+    {
+      title: "Webhook Status",
+      description:
+        "Get webhook receiver and relay status, including configured gateway and event counts.",
+    },
+    async () => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(webhookRelay.getStatus(), null, 2),
+        },
+      ],
+      structuredContent: webhookRelay.getStatus(),
+    }),
+  );
+
+  server.registerTool(
+    "webhook_list_events",
+    {
+      title: "Webhook List Events",
+      description:
+        "List received webhook events with optional status filtering and pagination.",
+      inputSchema: {
+        status: z
+          .enum(["pending", "retrying", "delivered", "dead_letter"])
+          .optional(),
+        limit: z.number().int().min(1).max(500).optional(),
+        offset: z.number().int().min(0).max(10000).optional(),
+      },
+    },
+    async (args) => {
+      const data = webhookRelay.listEvents(args ?? {});
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        structuredContent: data,
+      };
+    },
+  );
+
+  server.registerTool(
+    "webhook_get_event",
+    {
+      title: "Webhook Get Event",
+      description: "Get a specific webhook event by id.",
+      inputSchema: {
+        event_id: z.string().min(1),
+      },
+    },
+    async ({ event_id }) => {
+      const event = webhookRelay.getEvent(event_id);
+      if (!event) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: JSON.stringify({ error: "not_found" }) }],
+          structuredContent: { error: "not_found" },
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(event, null, 2) }],
+        structuredContent: event,
+      };
+    },
+  );
+
+  server.registerTool(
+    "webhook_replay_event",
+    {
+      title: "Webhook Replay Event",
+      description:
+        "Force a webhook event to be re-queued and relayed immediately to the configured gateway.",
+      inputSchema: {
+        event_id: z.string().min(1),
+      },
+    },
+    async ({ event_id }) => {
+      const out = await webhookRelay.replayEvent(event_id);
+      return {
+        isError: !out.ok,
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+        structuredContent: out,
+      };
+    },
+  );
+
+  server.registerTool(
+    "webhook_set_gateway",
+    {
+      title: "Webhook Set Gateway",
+      description:
+        "Update relay destination for webhook forwarding (can override env config at runtime).",
+      inputSchema: {
+        gateway_url: z.string().url().optional(),
+        gateway_auth_token: z.string().optional(),
+      },
+    },
+    async ({ gateway_url, gateway_auth_token }) => {
+      const out = webhookRelay.setGateway({
+        gatewayUrl: gateway_url,
+        gatewayAuthToken: gateway_auth_token,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+        structuredContent: out,
+      };
+    },
+  );
+
   async function start() {
+    await webhookRelay.start();
     try {
       await refreshToolsFromOttoauth();
     } catch (error) {
@@ -124,6 +255,9 @@ export function createOttoauthMcpServer(options = {}) {
   }
 
   function stop() {
+    webhookRelay.stop().catch((error) => {
+      logger.error("[ottoauth-mcp] failed to stop webhook relay:", error);
+    });
     if (refreshTimer) {
       clearInterval(refreshTimer);
       refreshTimer = null;
@@ -209,6 +343,7 @@ export function createOttoauthMcpServer(options = {}) {
     server,
     start,
     stop,
+    webhookRelay,
     refreshToolsFromOttoauth,
     ensureFreshTools,
     getSnapshot() {

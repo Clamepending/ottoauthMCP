@@ -19,6 +19,8 @@ describe("MCP stdio end-to-end", () => {
       env: {
         ...process.env,
         OTTOAUTH_BASE_URL: mock.baseUrl,
+        OTTOAUTH_WEBHOOK_PORT: "0",
+        WEBHOOK_EVENT_STORE_PATH: `/tmp/ottoauthmcp-test-${Date.now()}-1.json`,
       },
       stderr: "pipe",
     });
@@ -85,6 +87,8 @@ describe("MCP stdio end-to-end", () => {
       env: {
         ...process.env,
         OTTOAUTH_BASE_URL: mock.baseUrl,
+        OTTOAUTH_WEBHOOK_PORT: "0",
+        WEBHOOK_EVENT_STORE_PATH: `/tmp/ottoauthmcp-test-${Date.now()}-2.json`,
       },
     });
 
