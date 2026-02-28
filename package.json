@@ -1,0 +1,23 @@
+{
+  "name": "ottoauthmcp",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "MCP stdio proxy for Ottoauth HTTP APIs with daily tool refresh",
+  "bin": {
+    "ottoauth-mcp": "src/index.mjs"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run tests/e2e"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
