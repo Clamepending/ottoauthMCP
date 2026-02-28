@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 export const DEFAULT_BASE_URL = "http://localhost:3000";
-export const DEFAULT_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
+export const DEFAULT_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 export const DEFAULT_HTTP_TIMEOUT_MS = 30_000;
 
 /**

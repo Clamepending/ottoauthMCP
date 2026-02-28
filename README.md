@@ -6,7 +6,7 @@ Standalone MCP stdio server that proxies tool calls to Ottoauth HTTP endpoints.
 
 - Discovers service endpoints from `GET /api/services` docs.
 - Registers dynamic MCP tools per endpoint.
-- Refreshes discovered tools once every 24 hours.
+- Refreshes discovered tools once every hour.
 - Includes a generic passthrough tool: `ottoauth_http_request`.
 
 ## Run
