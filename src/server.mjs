@@ -122,6 +122,9 @@ export function createOttoauthMcpServer(options = {}) {
         fetchImpl,
         httpTimeoutMs,
       });
+      if (isListServicesRequest(method, normalizedPath) && result.ok) {
+        await ensureFreshTools(true);
+      }
       return responseToMcp(result);
     },
   );
@@ -572,6 +575,17 @@ export function normalizePath(value) {
     throw new Error(`Path must start with '/': ${trimmed}`);
   }
   return trimmed.replace(/\/{2,}/g, "/");
+}
+
+/**
+ * @param {string} method
+ * @param {string} path
+ */
+export function isListServicesRequest(method, path) {
+  return (
+    String(method).toUpperCase() === "GET" &&
+    String(path).replace(/\/+$/, "") === "/api/services"
+  );
 }
 
 /**
