@@ -28,6 +28,11 @@ curl -X POST /api/computeruse/runs/RUN_ID_HERE/events
   };
 
   const handlers = {
+    "POST /api/agents/create": (_req, body) => ({
+      username: body?.username ?? "agent",
+      privateKey: "pk_test_123",
+      callbackUrl: body?.callback_url ?? null,
+    }),
     "POST /api/services/amazon/buy": (_req, body) => ({ ok: true, endpoint: "buy", body }),
     "POST /api/services/amazon/history": (_req, body) => ({ ok: true, endpoint: "history", body }),
     "POST /api/computeruse/runs/:run_id/events": (_req, body) => ({ ok: true, endpoint: "events", body }),

@@ -102,6 +102,23 @@ export function createOttoauthMcpServer(options = {}) {
     headers: endpointInputSchema.headers,
   };
 
+  const createAccountInputSchema = {
+    username: z
+      .string()
+      .min(1)
+      .describe("Agent username to create (must be unique in Ottoauth)."),
+    callback_url: z
+      .string()
+      .url()
+      .optional()
+      .describe("Optional callback URL where Ottoauth can post account events."),
+    description: z
+      .string()
+      .max(100)
+      .optional()
+      .describe("Optional short profile description for the agent."),
+  };
+
   server.registerTool(
     "ottoauth_http_request",
     {
@@ -125,6 +142,31 @@ export function createOttoauthMcpServer(options = {}) {
       if (isListServicesRequest(method, normalizedPath) && result.ok) {
         await ensureFreshTools(true);
       }
+      return responseToMcp(result);
+    },
+  );
+
+  server.registerTool(
+    "ottoauth_create_account",
+    {
+      title: "Ottoauth Create Account",
+      description:
+        "Create a new Ottoauth account (agent) and return credentials, including the private key.",
+      inputSchema: createAccountInputSchema,
+    },
+    async ({ username, callback_url, description }) => {
+      const result = await forwardRequest({
+        baseUrl,
+        method: "POST",
+        path: "/api/agents/create",
+        body: {
+          username,
+          callback_url,
+          description,
+        },
+        fetchImpl,
+        httpTimeoutMs,
+      });
       return responseToMcp(result);
     },
   );

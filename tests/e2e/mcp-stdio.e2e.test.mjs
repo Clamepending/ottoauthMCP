@@ -33,9 +33,23 @@ describe("MCP stdio end-to-end", () => {
       const names = tools.tools.map((t) => t.name);
 
       expect(names).toContain("ottoauth_http_request");
+      expect(names).toContain("ottoauth_create_account");
       expect(names).toContain("ottoauth_amazon_post_services_amazon_buy");
       expect(names).toContain("ottoauth_amazon_post_services_amazon_history");
       expect(names).toContain("ottoauth_computeruse_post_computeruse_runs_run_id_events");
+
+      const create = await client.callTool({
+        name: "ottoauth_create_account",
+        arguments: {
+          username: "agent-new",
+          callback_url: "https://example.com/ottoauth/callback",
+          description: "demo agent",
+        },
+      });
+      expect(create.isError).toBeFalsy();
+      expect(create.structuredContent.status).toBe(200);
+      expect(create.structuredContent.body.username).toBe("agent-new");
+      expect(create.structuredContent.body.privateKey).toBe("pk_test_123");
 
       const call1 = await client.callTool({
         name: "ottoauth_amazon_post_services_amazon_buy",
