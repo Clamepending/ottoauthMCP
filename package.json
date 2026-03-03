@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/index.mjs",
+    "start:http": "node src/http-bridge.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run tests/e2e"
